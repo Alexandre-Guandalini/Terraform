@@ -1,0 +1,49 @@
+default:
+  image:
+    name: hashicorp/terraform:latest
+    entrypoint:
+      - /usr/bin/env
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" 
+  before_script:
+      - terraform init
+  cache:
+    key: terraform
+    paths:
+      - .terraform
+
+stages:
+  - test 
+  - apply
+  - destroy
+
+Chain_test:
+  stage: test
+  script:
+    - echo "Test Terraform"
+    - terraform validate 
+  except:
+    refs:
+      - master
+
+Chain_apply:
+  stage: apply
+  script:
+    - echo "Apply Terraform"
+    - terraform apply -var="group_id=s5" -auto-approve 
+  when: always
+  allow_failure: false
+  artifacts:
+    paths:
+      - terraform.tfstate
+    expire_in: 15 days
+    
+Chain_destroy:
+  stage: destroy
+  script:
+    - echo "Destroy Terraform"
+    - terraform init 
+    - terraform destroy -var="group_id=s5" -auto-approve 
+  when: manual
+  only:
+    refs:
+      - develop
